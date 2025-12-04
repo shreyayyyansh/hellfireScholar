@@ -8,10 +8,28 @@
     <link rel="icon" href="icon.jpg">
 </head>
 <body>
-    <div id="heaer">
-    <h1>Welcome</h1>
-    <h2>second test</h2>
+    <div id="authScreen" class="auth-screen">
+        <div class="auth-card">
+            <div class="auth-header">
+                <div class="auth-icon">📚</div>
+                <h1 class="auth-title">Hellfire Scholar</h1>
+                <p class="auth-subtitle">Your Academic Companion</p>
+            </div>
+
+            <div class="auth-tabs">
+                <button class="auth-tab active" onclick="switchAuthMode('login')">Login</button>
+                <button class="auth-tab" onclick="switchAuthMode('register')">Register</button>
+            </div>
+
+            <div id="registerField" style="display: none;">
+                <input type="text" id="registerName" placeholder="Full Name" class="input-group">
+            </div>
+            <input type="email" id="authEmail" placeholder="Email" class="input-group">
+            <input type="password" id="authPassword" placeholder="Password" class="input-group">
+            <button class="btn-primary" onclick="handleAuth()">
+                <span id="authButtonText">Login</span>
+            </button>
+        </div>
     </div>
-     <script src="script.js"></script>
 </body>
 </html>
