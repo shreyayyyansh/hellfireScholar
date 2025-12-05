@@ -14,14 +14,14 @@ body {
 .auth-screen {
     display: none;
     min-height: 100vh;
-    background: linear-gradient(135deg, #300303 0%, #390404 50%, #1f2937 100%);
+    background: linear-gradient(135deg, #6b0404 10% ,#ff1a1a 40%, #870505 50%, #002bff, #031d47);
     align-items: center;
     justify-content: center;
     padding: 20px;
 }
 
 .auth-card {
-    background: rgba(0,0,0,0.5);
+    background: rgba(34, 1, 1, 0.5);
     border-radius: 16px;
     box-shadow: 0 20px 50px rgba(0,0,0,0.5);
     padding: 40px;
@@ -37,7 +37,7 @@ body {
 .auth-icon {
     width: 64px;
     height: 64px;
-    background: linear-gradient(135deg, #300303, #4d0909);
+    background: linear-gradient(135deg, #300303 10%, #6b0404, #870505 50%, #031d47, #1f2937 100%);
     border-radius: 50%;
     display: inline-flex;
     align-items: center;
@@ -133,11 +133,12 @@ input:focus, select:focus {
 .app-screen {
     display: none;
     min-height: 100vh;
+    background-color: linear-gradient(135deg, #d9001b 0%, #0a0f2f 100%);
 }
 
 /* Header */
 header {
-    background: linear-gradient(135deg, #f97316, #dc2626);
+    background: linear-gradient(135deg, #AE0808FF, #1B1C70);
     color: white;
     padding: 16px 0;
     box-shadow: 0 2px 10px rgba(0,0,0,0.3);
@@ -236,7 +237,7 @@ header {
 }
 
 .nav-item.active {
-    background: linear-gradient(135deg, #f97316, #dc2626);
+    background: linear-gradient(135deg,  #AE0808FF, #1B1C70);
     color: white;
 }
 
@@ -270,7 +271,7 @@ header {
     display: flex;
     align-items: center;
     gap: 8px;
-    background: linear-gradient(135deg, #f97316, #dc2626);
+    background: linear-gradient(135deg, #AE0808FF, #1B1C70);
     color: white;
     border: none;
     padding: 10px 20px;
@@ -410,7 +411,7 @@ header {
 
 .progress-fill {
     height: 100%;
-    background: linear-gradient(135deg, #f97316, #dc2626);
+    background: linear-gradient(135deg, #AE0808FF, #1B1C70);
     transition: width 0.5s;
 }
 
