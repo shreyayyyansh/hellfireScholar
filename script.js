@@ -50,6 +50,53 @@ let appState = {
         }
     }
 };
+async function fetchAndRenderUser() {
+  const token = localStorage.getItem('token');
+  if (!token) {
+    // no token — keep showing auth screen or default Student
+    return null;
+  }
+
+  try {
+    const res = await fetch('http://localhost:5000/api/auth/me', {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + token
+      }
+    });
+
+    if (!res.ok) {
+      console.warn('Could not fetch /me', res.status);
+      if (res.status === 401 || res.status === 403) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('userName');
+      }
+      return null;
+    }
+
+    const json = await res.json();
+    const user = json.user || null;
+
+    appState.currentUser = user;
+    // update UI
+    const topName = document.getElementById('userName');
+    if (topName) topName.textContent = user?.name || 'Student';
+
+    // if you have sidebarName or sidebarEmail, set them too
+    const sidebarName = document.getElementById('sidebarName');
+    if (sidebarName) sidebarName.textContent = user?.name || '';
+
+    const sidebarEmail = document.getElementById('sidebarEmail');
+    if (sidebarEmail) sidebarEmail.textContent = user?.email || '';
+
+    return user;
+  } catch (err) {
+    console.error('fetchAndRenderUser error', err);
+    return null;
+  }
+}
+
 // AUTHENTICATION FUNCTIONS
 function switchAuthMode(mode) {
     appState.authMode = mode;
@@ -70,60 +117,86 @@ function switchAuthMode(mode) {
     }
 }
 
-function handleAuth() {
+async function handleAuth() {
     const email = document.getElementById('authEmail').value;
     const password = document.getElementById('authPassword').value;
     const name = document.getElementById('registerName').value;
     const course = document.getElementById('registerCourse') ? document.getElementById('registerCourse').value : '';
-    document.getElementById('userName').textContent = name;
+
     if (!email || !password) {
         alert('Please fill in all fields');
         return;
     }
+
+    let endpoint = '';
+    let body = {};
+
     if (appState.authMode === 'register') {
-        if (!name) {
-            alert('Please enter your name');
-            return;
-        }
-        if (!course) {
-            alert('Please select your course');
-            return;
-        }
+        if (!name) return alert('Please enter your name');
+        if (!course) return alert('Please select your course');
+
+        endpoint = 'http://localhost:5000/api/auth/register';
+        body = { name, email, password };
+    } else {
+        endpoint = 'http://localhost:5000/api/auth/login';
+        body = { email, password };
     }
-    appState.currentUser = {
-        name: appState.authMode === 'register' ? name : 'Student',
-        email: email,
-        course: appState.authMode === 'register' ? course : null
-    };
-    
-    const authScreen = document.getElementById('authScreen');
-    const appScreen = document.getElementById('appScreen');
-    
-    authScreen.style.display = 'none';
-    appScreen.style.display = 'block';
-    
-    document.getElementById('userName').textContent = appState.currentUser.name;
-    
-    updateDashboard();
-    renderNotes();
-    renderSyllabus();
-    renderAssignments();
-    renderAttendance();
+
+    try {
+        const res = await fetch(endpoint, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body)
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+            alert(data.error || 'Authentication failed');
+            return;
+        }
+
+        // Save JWT token
+        localStorage.setItem("token", data.token);
+
+        // Save real backend user
+        appState.currentUser = data.user;
+
+        document.getElementById('userName').textContent = data.user.name;
+
+        // Switch screens
+        document.getElementById('authScreen').style.display = 'none';
+        document.getElementById('appScreen').style.display = 'block';
+
+        updateDashboard();
+        renderNotes();
+        renderSyllabus();
+        renderAssignments();
+        renderAttendance();
+
+    } catch (err) {
+        alert("Network error");
+        console.error(err);
+    }
 }
 
+
 function logout() {
-    appState.currentUser = null;
-    
-    const authScreen = document.getElementById('authScreen');
-    const appScreen = document.getElementById('appScreen');
-    
-    appScreen.style.display = 'none';
-    authScreen.style.display = 'flex';
-    
-    document.getElementById('authEmail').value = '';
-    document.getElementById('authPassword').value = '';
-    document.getElementById('registerName').value = '';
-    if (document.getElementById('registerCourse')) document.getElementById('registerCourse').value = '';
+  appState.currentUser = null;
+  localStorage.removeItem('token');
+  localStorage.removeItem('userName');
+
+  const authScreen = document.getElementById('authScreen');
+  const appScreen = document.getElementById('appScreen');
+
+  appScreen.style.display = 'none';
+  authScreen.style.display = 'flex';
+
+  document.getElementById('authEmail').value = '';
+  document.getElementById('authPassword').value = '';
+  document.getElementById('registerName').value = '';
+  if (document.getElementById('registerCourse')) document.getElementById('registerCourse').value = '';
+  document.getElementById('userName').textContent = 'Student';
 }
 // NAVIGATION
 function switchTab(tabName) {
@@ -530,12 +603,25 @@ function renderAttendance() {
         `;
     }).join('');
 }
-window.addEventListener('DOMContentLoaded', () => {
-    const authScreen = document.getElementById('authScreen');
-    const appScreen = document.getElementById('appScreen');
-    
-    authScreen.style.display = 'flex';
-    appScreen.style.display = 'none';
-    
-    console.log('🔥 Hellfire Scholar - Subject-wise Edition initialized! 📚');
+window.addEventListener('DOMContentLoaded', async () => {
+  const authScreen = document.getElementById('authScreen');
+  const appScreen = document.getElementById('appScreen');
+
+  // default: show login screen
+  authScreen.style.display = 'flex';
+  appScreen.style.display = 'none';
+
+  // If token exists, fetch user and show app
+  const user = await fetchAndRenderUser();
+  if (user) {
+    authScreen.style.display = 'none';
+    appScreen.style.display = 'block';
+    updateDashboard();
+    renderNotes();
+    renderSyllabus();
+    renderAssignments();
+    renderAttendance();
+  }
+
+  console.log('🔥 Hellfire Scholar - Subject-wise Edition initialized! 📚');
 });
