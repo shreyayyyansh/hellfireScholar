@@ -77,12 +77,15 @@ router.post('/upload', authMiddleware, upload.single('file'), async (req, res) =
  * GET /api/notes
  * Query params: subject, category, q, tags (comma sep), page, limit
  */
-router.get('/', async (req, res) => {
+router.get('/', authMiddleware, async (req, res) => {
   try {
     console.log('GET /api/notes req.query =', req.query);
 
+    const userId = req.user.userId;  // from JWT
+
     const { subject, category, q, tags, page = 1, limit = 50 } = req.query;
-    const filter = {};
+
+    const filter = { uploadedBy: userId };   // ⭐ Only return user's own notes
 
     function escapeRegExp(str) {
       return String(str).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
