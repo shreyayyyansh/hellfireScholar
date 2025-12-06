@@ -149,6 +149,7 @@ async function handleAuth() {
       body: JSON.stringify(body)
     });
 
+    // parse JSON safely
     const data = await res.json().catch(() => ({}));
 
     if (!res.ok) {
