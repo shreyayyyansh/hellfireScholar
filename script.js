@@ -463,7 +463,7 @@ function renderNotesUI() {
       .join('');
 
     return `
-      <div class="note-card">
+      <div class="note-card" onclick="openNote('${safeUrl}')" style="cursor:pointer;">
         <div class="note-header">
           <div>
             <div class="note-title">${safeTitle}</div>
@@ -472,14 +472,19 @@ function renderNotesUI() {
               ${tagsHtml}
             </div>
           </div>
-          <span class="badge badge-orange">${safeCategory}</span>
+          <span class="badge badge-orange badge-square">${safeCategory}</span>
         </div>
 
-        <div style="display:flex;justify-content:space-between;align-items:center;color:#94a3b8;font-size:14px;margin-top:12px;">
+        <div
+          class="note-footer"
+          style="display:flex;justify-content:space-between;align-items:center;color:#94a3b8;font-size:14px;margin-top:12px;"
+        >
           <span>${safeDate}</span>
           <div>
-            <a href="${safeUrl}" target="_blank" style="color:#60a5fa; margin-right:10px;" ${safeUrl === '#' ? 'onclick="return false;"' : ''}>Open</a>
-            ${ canDelete ? `<button onclick="deleteNoteBackend('${escapeHtml(note.id)}')" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:18px;">🗑️</button>` : '' }
+            ${ canDelete ? `<button onclick="event.stopPropagation(); deleteNoteBackend('${escapeHtml(note.id)}')"
+              style="background:#b91c1c;border:1px solid #ef4444;color:#ffffff;cursor:pointer;font-size:14px;border-radius:999px;padding:6px 12px;">
+              Delete
+            </button>` : '' }
           </div>
         </div>
       </div>
@@ -492,6 +497,11 @@ function escapeHtml(str = '') {
   return String(str).replace(/[&<>"'`=\/]/g, function (s) {
     return ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;','/':'&#x2F;','`':'&#x60;','=':'&#x3D;' })[s];
   });
+}
+
+function openNote(url) {
+  if (!url || url === '#') return;
+  window.open(url, '_blank');
 }
 
 async function deleteNoteBackend(noteId) {
@@ -628,7 +638,7 @@ function renderAssignments() {
           <div style="text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 8px;">
             <span class="badge ${statusClass}">${statusText}</span>
             ${assignment.marks !== null ? `<div class="assignment-marks">${assignment.marks}/100</div>` : ''}
-            <button onclick="deleteAssignment(${assignment.id})" style="background: none; border: none; color: #ef4444; cursor: pointer; font-size: 18px;">🗑️</button>
+            <button onclick="deleteAssignment(${assignment.id})" style="background: none; border: none; color: #ef4444; cursor: pointer; font-size: 18px;">Delete</button>
           </div>
         </div>
       </div>`;
