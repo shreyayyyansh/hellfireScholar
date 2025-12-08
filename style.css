@@ -210,11 +210,13 @@ header {
 
 /* Layout */
 .app-container {
-    max-width: 1400px;
-    margin: 0 auto;
-    padding: 24px 20px;
+    width: 100%;
+    max-width: 100%;
+    margin: 0;
+    padding: 24px 32px;
     display: flex;
     gap: 24px;
+    min-height: calc(100vh - 80px);
 }
 
 /* Sidebar */
@@ -224,7 +226,7 @@ header {
     border-radius: 12px;
     box-shadow: 0 2px 8px rgba(0,0,0,0.3);
     padding: 16px;
-    height: fit-content;
+    min-height: 100%;
     position: sticky;
     top: 24px;
 }
@@ -667,6 +669,10 @@ header {
 /* Responsive Design */
 @media (max-width: 768px) {
     .app-container {
+        width: 100%;
+        max-width: 100%;
+        margin: 0;
+        padding: 16px 12px;
         flex-direction: column;
     }
     
@@ -726,7 +732,7 @@ header {
 
 /* Modal Action Buttons */
 .btn-cancel {
-    background: #7f1d1d;
+    background: #dc2626;
     color: white;
     padding: 10px 20px;
     border-radius: 8px;
@@ -740,7 +746,7 @@ header {
     box-shadow: 0 0 10px rgba(239,68,68,0.4);
 }
 .btn-save {
-    background: #065f46;
+    background: #16a34a;
     color: white;
     padding: 10px 24px;
     border-radius: 8px;
@@ -750,6 +756,115 @@ header {
     transition: all 0.3s;
 }
 .btn-save:hover {
-    background: #0d9488;
-    box-shadow: 0 0 12px rgba(16,185,129,0.4);
+    background: #22c55e;
+    box-shadow: 0 0 12px rgba(34,197,94,0.4);
+}
+
+/* Alerts & Focus card */
+.alerts-card {
+    padding: 20px 24px;
+    border-radius: 16px;
+    background: #111827;
+    box-shadow: 0 18px 45px rgba(0, 0, 0, 0.45);
+    border: 1px solid #4b5563;
+}
+
+.alerts-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 12px;
+}
+
+.alerts-subtitle {
+    margin-top: 4px;
+    font-size: 0.86rem;
+    color: #9ca3af;
+}
+
+#alertsOverallStatus {
+    padding: 6px 12px;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    background: rgba(22, 163, 74, 0.12);
+    color: #4ade80;
+    border: 1px solid rgba(34, 197, 94, 0.5);
+    white-space: nowrap;
+}
+
+.alerts-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+    margin-top: 8px;
+}
+
+@media (max-width: 768px) {
+    .alerts-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.alert-section {
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: #020617;
+    border: 1px solid #334155;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.alert-section-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 4px;
+}
+
+.alert-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 999px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(15, 118, 110, 0.25);
+    font-size: 18px;
+}
+
+.alert-section-title {
+    margin: 0;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #e5e7eb;
+}
+
+.alert-section-caption {
+    margin: 0;
+    font-size: 0.8rem;
+    color: #9ca3af;
+}
+
+.alert-panel {
+    margin-top: 4px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    background: #020617;
+    border: 1px dashed #4b5563;
+    font-size: 0.86rem;
+    color: #e5e7eb;
+}
+
+.today-focus-header {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.today-focus-btn {
+    margin-left: auto;
+    font-size: 0.75rem;
+    padding: 4px 10px;
 }
