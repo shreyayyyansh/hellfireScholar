@@ -868,3 +868,20 @@ header {
     font-size: 0.75rem;
     padding: 4px 10px;
 }
+
+/* Dashboard stat icons */
+.stat-icon-img {
+    width: 64px;
+    height: 64px;
+    object-fit: contain;
+    display: block;
+    margin-left: auto;
+}
+
+/* Alerts & Focus icons */
+.alert-icon-img {
+    width: 32px;
+    height: 32px;
+    object-fit: contain;
+    display: block;
+}

@@ -456,6 +456,11 @@ function updateDashboard() {
 
   // use the active subjects for the current course
   const activeSubjects = loadSelectedSubjectsForCourse(getCurrentCourse());
+  // update Subjects count card on dashboard
+  const subjectCountEl = document.getElementById('subjectCount');
+  if (subjectCountEl) {
+    subjectCountEl.textContent = activeSubjects.length;
+  }
   activeSubjects.forEach(subject => {
     // make sure attendance object exists for this subject
     if (!appState.attendance[subject]) {
@@ -500,7 +505,7 @@ function renderAttendanceAlerts() {
 
   if (shortAttendance.length === 0) {
     alertsContainer.innerHTML =
-      '<p style="color: #10b981;">All subjects meeting attendance requirements! 🎉</p>';
+      '<p style="color: #10b981;">All subjects meeting attendance requirements!</p>';
     return;
   }
 
@@ -515,7 +520,7 @@ function renderAttendanceAlerts() {
       );
       return `
         <div class="alert">
-          <div class="alert-icon">⚠️</div>
+          <div class="alert-icon"></div>
           <div class="alert-content">
             <div class="alert-title">${subject}</div>
             <div class="alert-text">Current: ${percentage}% | Need ${needed} more classes</div>
@@ -535,7 +540,7 @@ function renderTaskAlerts() {
     if (pending.length === 0) {
         container.innerHTML = `
             <div class="alert-chip ok-chip">
-                ✅ No pending tasks right now
+                No pending tasks right now
             </div>
         `;
         return;
@@ -610,7 +615,7 @@ function renderReminderAlerts() {
     if (reminders.length === 0) {
         container.innerHTML = `
             <div class="alert-chip ok-chip">
-                🎉 No alerts or reminders right now
+                No alerts or reminders right now
             </div>
         `;
         return;
@@ -618,14 +623,10 @@ function renderReminderAlerts() {
 
     container.innerHTML = reminders
         .map(r => {
-            const icon =
-                r.type === 'attendance' ? '📉' :
-                r.type === 'task-overdue' ? '⏰' :
-                '🔔';
-
+            const icon = '';
             return `
                 <div class="alert-chip ${r.type === 'task-overdue' ? 'danger-chip' : 'warning-chip'}">
-                    <span>${icon}</span>
+                    <span></span>
                     <span>${escapeHtml(r.message)}</span>
                 </div>
             `;
@@ -647,7 +648,7 @@ function showTodayFocus() {
     if (focusAssignments.length === 0) {
         container.innerHTML = `
             <div class="alert-chip ok-chip">
-                ✅ No urgent tasks in the next 3 days.
+                No urgent tasks in the next 3 days.
                 You can revise weak topics or upload notes.
             </div>
         `;
@@ -827,7 +828,7 @@ function renderNotesUI() {
   if (!appState.notes || appState.notes.length === 0) {
     notesGrid.innerHTML = `
       <div class="empty-state">
-        <div class="empty-icon">📄</div>
+        <div class="empty-icon"></div>
         <p style="font-size: 18px; color: #94a3b8; margin-bottom: 8px;">No notes found</p>
         <p style="color: #64748b; font-size: 14px;">Upload notes to get started</p>
       </div>`;
@@ -968,13 +969,17 @@ function populateSyllabusSubjects() {
 
 function openSubjectManager() {
   const course = getCurrentCourse();
-  const subjects = courseSubjects[course] || [];
-  if (!subjects.length) {
+  const baseSubjects = courseSubjects[course] || [];
+
+  const currentSelection = loadSelectedSubjectsForCourse(course);
+  const customSubjects = currentSelection.filter(s => !baseSubjects.includes(s));
+  const allSubjects = baseSubjects.concat(customSubjects);
+
+  if (!allSubjects.length) {
     alert('No subjects configured for this course yet.');
     return;
   }
 
-  const currentSelection = loadSelectedSubjectsForCourse(course);
   const modal = document.getElementById('manageSubjectsModal');
   const list = document.getElementById('manageSubjectsList');
   const label = document.getElementById('manageSubjectsCourseLabel');
@@ -983,14 +988,21 @@ function openSubjectManager() {
 
   label.textContent = 'Available subjects for ' + course + ' (4th Sem):';
 
-  list.innerHTML = subjects
+  list.innerHTML = allSubjects
     .map(subject => {
       const checked = currentSelection.includes(subject) ? 'checked' : '';
+      const isCustom = !baseSubjects.includes(subject);
+      const safeValue = subject.replace(/"/g, '&quot;');
+      const safeName = subject.replace(/'/g, "\\'");
       return `
-        <label class="manage-subject-row">
-          <input type="checkbox" value="${subject.replace(/"/g, '&quot;')}" ${checked}>
-          <span>${subject}</span>
-        </label>
+        <div class="manage-subject-row">
+          <div style="display:flex; align-items:center; gap:8px; flex:1;">
+            <input type="checkbox" value="${safeValue}" ${checked}>
+            <span>${subject}</span>
+            ${isCustom ? '<span class="badge badge-orange" style="font-size:10px;">Custom</span>' : ''}
+          </div>
+          ${isCustom ? `<button type="button" class="btn-cancel" style="padding:4px 10px; font-size:12px;" onclick="removeCustomSubject('${safeName}')">Remove</button>` : ''}
+        </div>
       `;
     })
     .join('');
@@ -1123,6 +1135,23 @@ function addCustomSubject() {
     return;
   }
 
+  // Ask user for units / topics for this custom subject
+  const unitsInput = prompt(
+    'Enter units/topics for this subject (separated by commas).\nExample: Unit 1 – Intro, Unit 2 – Basics, Unit 3 – Applications'
+  );
+
+  if (unitsInput && unitsInput.trim().length > 0) {
+    const units = unitsInput
+      .split(',')
+      .map(u => u.trim())
+      .filter(u => u.length > 0);
+
+    if (units.length > 0) {
+      syllabusData[name] = units;
+    }
+  }
+
+  // add subject to selected list and attendance map
   subjects.push(name);
   saveSelectedSubjectsForCourse(course, subjects);
 
@@ -1135,6 +1164,41 @@ function addCustomSubject() {
   renderSyllabus();
   renderAttendance();
   updateDashboard();
+}
+
+function removeCustomSubject(name) {
+  if (!name) return;
+  if (!confirm('Remove this custom subject completely?')) return;
+
+  const course = getCurrentCourse();
+  let subjects = loadSelectedSubjectsForCourse(course);
+  subjects = subjects.filter(s => s !== name);
+  saveSelectedSubjectsForCourse(course, subjects);
+
+  // clean attendance data for this subject
+  if (appState.attendance[name]) {
+    delete appState.attendance[name];
+  }
+
+  // clean syllabus data for this subject if it was created as custom
+  if (syllabusData[name]) {
+    delete syllabusData[name];
+  }
+
+  // clear completed topics cache for this subject
+  try {
+    const key = getCompletedTopicsKey(name);
+    localStorage.removeItem(key);
+  } catch (e) {}
+
+  populateSyllabusSubjects();
+  populateSubjectDropdowns();
+  renderSyllabus();
+  renderAttendance();
+  updateDashboard();
+
+  // re-open / refresh the manager to reflect changes
+  openSubjectManager();
 }
 
 // ASSIGNMENTS FUNCTIONS
@@ -1171,7 +1235,7 @@ function renderAssignments() {
   if (appState.assignments.length === 0) {
     assignmentsContainer.innerHTML = `
       <div class="empty-state">
-        <div class="empty-icon">✅</div>
+        <div class="empty-icon"></div>
         <p style="font-size: 18px; color: #94a3b8; margin-bottom: 8px;">No assignments yet</p>
         <p style="color: #64748b; font-size: 14px;">Click "Add Assignment" to track your coursework</p>
       </div>`;
@@ -1253,7 +1317,7 @@ function renderAttendance() {
           </div>
         </div>
         ${att.total > 0 ? `<div class="progress-bar"><div class="progress-fill ${isShort ? 'red' : 'green'}" style="width: ${Math.min(percentage, 100)}%"></div></div>` : ''}
-        ${isShort ? `<div class="alert" style="margin-top: 12px;"><div class="alert-icon">⚠️</div><div class="alert-content"><p class="alert-text">Attend ${needed} more ${needed === 1 ? 'class' : 'classes'} to meet minimum requirement</p></div></div>` : ''}
+        ${isShort ? `<div class="alert" style="margin-top: 12px;"><div class="alert-icon"></div><div class="alert-content"><p class="alert-text">Attend ${needed} more ${needed === 1 ? 'class' : 'classes'} to meet minimum requirement</p></div></div>` : ''}
       </div>`;
   }).join('');
 }

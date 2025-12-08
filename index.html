@@ -98,7 +98,7 @@
                                     <div class="stat-label">Total Notes</div>
                                     <div class="stat-value" style="color: #f97316;" id="totalNotes">0</div>
                                 </div>
-                                <div style="font-size: 40px;">📄</div>
+                                <img src="Notes.png" class="stat-icon-img">
                             </div>
                         </div>
                         <div class="stat-card">
@@ -107,7 +107,7 @@
                                     <div class="stat-label">Pending Tasks</div>
                                     <div class="stat-value" style="color: #dc2626;" id="pendingTasks">0</div>
                                 </div>
-                                <div style="font-size: 40px;">✅</div>
+                                <img src="Tasks.png" class="stat-icon-img">
                             </div>
                         </div>
                         <div class="stat-card">
@@ -116,16 +116,16 @@
                                     <div class="stat-label">Avg Attendance</div>
                                     <div class="stat-value" style="color: #10b981;" id="avgAttendance">--</div>
                                 </div>
-                                <div style="font-size: 40px;">👥</div>
+                                <img src="Attendance.png" class="stat-icon-img">
                             </div>
                         </div>
                         <div class="stat-card">
                             <div class="stat-content">
                                 <div>
                                     <div class="stat-label">Subjects</div>
-                                    <div class="stat-value" style="color: #3b82f6;">4</div>
+                                   <div class="stat-value" style="color: #3b82f6;" id="subjectCount">0</div>
                                 </div>
-                                <div style="font-size: 40px;">📚</div>
+                                <img src="Subjects.png" class="stat-icon-img">
                             </div>
                         </div>
                     </div>
@@ -136,13 +136,13 @@
                                 <h3 class="card-title">Alerts &amp; Focus</h3>
                                 <p class="alerts-subtitle">Quick snapshot of what needs your attention.</p>
                             </div>
-                            <div class="alerts-status-pill" id="alertsOverallStatus">All clear ✅</div>
+                            <div class="alerts-status-pill" id="alertsOverallStatus">All clear</div>
                         </div>
 
                         <div class="alerts-grid">
                             <section class="alert-section">
                                 <div class="alert-section-header">
-                                    <div class="alert-icon">👥</div>
+                                    <div class="alert-icon"><img src="Alert.png" class="alert-icon-img"></div>
                                     <div>
                                         <h4 class="alert-section-title">Attendance Alerts</h4>
                                         <p class="alert-section-caption">Subjects meeting or missing attendance requirements.</p>
@@ -153,7 +153,7 @@
 
                             <section class="alert-section">
                                 <div class="alert-section-header">
-                                    <div class="alert-icon">📚</div>
+                                    <div class="alert-icon"><img src="Alert.png" class="alert-icon-img"></div>
                                     <div>
                                         <h4 class="alert-section-title">Task Alerts</h4>
                                         <p class="alert-section-caption">Upcoming deadlines and pending tasks.</p>
@@ -164,7 +164,7 @@
 
                             <section class="alert-section">
                                 <div class="alert-section-header">
-                                    <div class="alert-icon">⏰</div>
+                                    <div class="alert-icon"><img src="Alert.png" class="alert-icon-img"></div>
                                     <div>
                                         <h4 class="alert-section-title">Alerts &amp; Reminders</h4>
                                         <p class="alert-section-caption">Important reminders you have set.</p>
@@ -175,7 +175,7 @@
 
                             <section class="alert-section">
                                 <div class="alert-section-header">
-                                    <div class="alert-icon">🎯</div>
+                                    <div class="alert-icon"><img src="Alert.png" class="alert-icon-img"></div>
                                     <div class="today-focus-header">
                                         <h4 class="alert-section-title">Today&apos;s Focus</h4>
                                         <p class="alert-section-caption">What you should prioritise today.</p>
@@ -245,8 +245,17 @@
                             <span>➕</span>
                             <span>Add Assignment</span>
                         </button>
-                    </div>
-                    <div id="assignmentsContainer"></div>
+                    </div><div class="assignment-filters">
+    <label class="input-label">Filter:</label>
+    <select id="assignmentFilter" class="filter-select" onchange="renderAssignments()">
+        <option value="all">All</option>
+        <option value="pending">Pending</option>
+        <option value="due-today">Due Today</option>
+        <option value="overdue">Overdue</option>
+    </select>
+</div>
+
+<div id="assignmentsContainer"></div>
                 </div>
 
                 <!-- Attendance -->
