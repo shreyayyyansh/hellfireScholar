@@ -258,27 +258,36 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // DASHBOARD FUNCTIONS
 function updateDashboard() {
-  document.getElementById('totalNotes').textContent = appState.notes.length;
-  document.getElementById('pendingTasks').textContent = appState.assignments.filter(a => a.status === 'pending').length;
+    // basic stats
+    document.getElementById('totalNotes').textContent = appState.notes.length;
+    document.getElementById('pendingTasks').textContent =
+        appState.assignments.filter(a => a.status === 'pending').length;
 
-  let totalAttendance = 0;
-  let subjectsWithData = 0;
+    // average attendance
+    let totalAttendance = 0;
+    let subjectsWithData = 0;
 
-  appState.subjects.forEach(subject => {
-    const att = appState.attendance[subject];
-    if (att.total > 0) {
-      totalAttendance += (att.attended / att.total) * 100;
-      subjectsWithData++;
+    appState.subjects.forEach(subject => {
+        const att = appState.attendance[subject];
+        if (att.total > 0) {
+            totalAttendance += (att.attended / att.total) * 100;
+            subjectsWithData++;
+        }
+    });
+
+    if (subjectsWithData > 0) {
+        document.getElementById('avgAttendance').textContent =
+            Math.round(totalAttendance / subjectsWithData) + '%';
+    } else {
+        document.getElementById('avgAttendance').textContent = '--';
     }
-  });
 
-  if (subjectsWithData > 0) {
-    document.getElementById('avgAttendance').textContent = Math.round(totalAttendance / subjectsWithData) + '%';
-  } else {
-    document.getElementById('avgAttendance').textContent = '--';
-  }
-
-  renderAttendanceAlerts();
+    // panels on the dashboard
+    renderAttendanceAlerts();
+    renderTaskAlerts();
+    renderReminderAlerts();
+    showTodayFocus(); // optional auto-refresh
+     // NEW
 }
 
 function renderAttendanceAlerts() {
@@ -308,6 +317,167 @@ function renderAttendanceAlerts() {
       </div>
     `;
   }).join('');
+}
+// TASK ALERTS – show which tasks are pending
+function renderTaskAlerts() {
+    const container = document.getElementById('taskAlerts');
+    if (!container) return; // in case HTML not updated
+
+    const pending = appState.assignments.filter(a => a.status === 'pending');
+
+    if (pending.length === 0) {
+        container.innerHTML = `
+            <div class="alert-chip ok-chip">
+                ✅ No pending tasks right now
+            </div>
+        `;
+        return;
+    }
+
+    container.innerHTML = pending
+        .map(a => {
+            const days = getDaysFromToday(a.deadline);
+            let whenText = '';
+            if (days === 0) whenText = 'Due today';
+            else if (days === 1) whenText = 'Due tomorrow';
+            else if (typeof days === 'number')
+                whenText = `Due in ${days} day${days === 1 ? '' : 's'}`;
+
+            return `
+                <div class="alert-chip warning-chip">
+                    <strong>${escapeHtml(a.title)}</strong>
+                    <span>(${escapeHtml(a.subject || 'General')})</span>
+                    <span> • ${whenText || ''}</span>
+                </div>
+            `;
+        })
+        .join('');
+}
+// ALERTS & REMINDERS – combines low attendance + near / overdue tasks
+function renderReminderAlerts() {
+    const container = document.getElementById('reminderAlerts');
+    if (!container) return;
+
+    const reminders = [];
+
+    // 1) Attendance-based reminders (reuse logic of "short attendance")
+    appState.subjects.forEach(subject => {
+        const att = appState.attendance[subject];
+        if (att.total > 0) {
+            const percentage = (att.attended / att.total) * 100;
+            if (percentage < att.required) {
+                const needed = calculateClassesNeeded(att.attended, att.total, att.required);
+                reminders.push({
+                    type: 'attendance',
+                    message: `${subject}: Attend ${needed} more class${needed === 1 ? '' : 'es'} to reach ${att.required}%`
+                });
+            }
+        }
+    });
+
+    // 2) Assignment / quiz reminders
+    const now = new Date();
+    appState.assignments.forEach(a => {
+        const days = getDaysFromToday(a.deadline);
+        if (days === null) return;
+
+        // overdue or due soon
+        if (days < 0 && a.status !== 'graded') {
+            reminders.push({
+                type: 'task-overdue',
+                message: `${a.title} (${a.subject || 'General'}) was due ${Math.abs(days)} day${Math.abs(days) === 1 ? '' : 's'} ago`
+            });
+        } else if (days >= 0 && days <= 3 && a.status !== 'graded') {
+            const whenText =
+                days === 0 ? 'Due today' :
+                days === 1 ? 'Due tomorrow' :
+                `Due in ${days} days`;
+
+            reminders.push({
+                type: 'task-soon',
+                message: `${a.title} (${a.subject || 'General'}) – ${whenText}`
+            });
+        }
+    });
+
+    if (reminders.length === 0) {
+        container.innerHTML = `
+            <div class="alert-chip ok-chip">
+                🎉 No alerts or reminders right now
+            </div>
+        `;
+        return;
+    }
+
+    container.innerHTML = reminders
+        .map(r => {
+            const icon =
+                r.type === 'attendance' ? '📉' :
+                r.type === 'task-overdue' ? '⏰' :
+                '🔔';
+
+            return `
+                <div class="alert-chip ${r.type === 'task-overdue' ? 'danger-chip' : 'warning-chip'}">
+                    <span>${icon}</span>
+                    <span>${escapeHtml(r.message)}</span>
+                </div>
+            `;
+        })
+        .join('');
+}
+
+// TODAY'S FOCUS – subjects that have work due today or in next 3 days
+function showTodayFocus() {
+    const container = document.getElementById('todayFocus');
+    if (!container) return;
+
+    // pick assignments/quiz that are still not graded
+    const focusAssignments = appState.assignments.filter(a => {
+        const days = getDaysFromToday(a.deadline);
+        return typeof days === 'number' && days >= 0 && days <= 3 && a.status !== 'graded';
+    });
+
+    if (focusAssignments.length === 0) {
+        container.innerHTML = `
+            <div class="alert-chip ok-chip">
+                ✅ No urgent tasks in the next 3 days.
+                You can revise weak topics or upload notes.
+            </div>
+        `;
+        return;
+    }
+
+    // group by subject
+    const bySubject = {};
+    focusAssignments.forEach(a => {
+        const subj = a.subject || 'General';
+        if (!bySubject[subj]) bySubject[subj] = [];
+        bySubject[subj].push(a);
+    });
+
+    const blocks = Object.keys(bySubject).map(subj => {
+        const itemsHtml = bySubject[subj]
+            .map(a => {
+                const days = getDaysFromToday(a.deadline);
+                const whenText =
+                    days === 0 ? 'today' :
+                    days === 1 ? 'tomorrow' :
+                    `in ${days} days`;
+                return `<li>${escapeHtml(a.title)} – due ${whenText}</li>`;
+            })
+            .join('');
+
+        return `
+            <div class="today-card">
+                <div class="today-subject">${escapeHtml(subj)}</div>
+                <ul class="today-list">
+                    ${itemsHtml}
+                </ul>
+            </div>
+        `;
+    });
+
+    container.innerHTML = blocks.join('');
 }
 
 // NOTES FUNCTIONS
@@ -428,6 +598,20 @@ async function fetchAndRenderNotes(page = 1, limit = 50) {
     appState.notes = [];
     renderNotesUI();
   }
+}
+
+// helper: difference in whole days between today and a given date string (yyyy-mm-dd)
+function getDaysFromToday(dateStr) {
+    if (!dateStr) return null;
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return null;
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    d.setHours(0, 0, 0, 0);
+
+    const diffMs = d.getTime() - today.getTime();
+    return Math.round(diffMs / (1000 * 60 * 60 * 24));
 }
 
 // Renders notes from appState.notes into #notesGrid
@@ -614,9 +798,11 @@ function addAssignment() {
   document.getElementById('marksField').style.display = 'none';
 
   closeModal('addAssignment');
+
   renderAssignments();
-  updateDashboard();
+  updateDashboard();      // this will also refresh task alerts, reminders, today focus
 }
+
 
 function renderAssignments() {
   const assignmentsContainer = document.getElementById('assignmentsContainer');
