@@ -1,5 +1,5 @@
 // Application State
-const API_BASE = 'http://localhost:4000'; // change this in one place if port changes
+const API_BASE = 'http://localhost:4000'; 
 
 let appState = {
   currentUser: null,
@@ -74,7 +74,6 @@ const courseSubjects = {
   ]
 };
 
-// Units / topics for each subject (used in syllabus section)
 const syllabusData = {
   "VLSI TECHNOLOGY": [
     "Unit 1 – Introduction and basic fabrication steps",
@@ -276,7 +275,6 @@ async function fetchAndRenderUser() {
   }
 }
 
-// AUTHENTICATION FUNCTIONS
 function switchAuthMode(mode) {
   appState.authMode = mode;
 
@@ -387,19 +385,16 @@ function logout() {
   document.getElementById('userName').textContent = 'Student';
 }
 
-// NAVIGATION
 function switchTab(tabName, ev) {
   appState.activeTab = tabName;
 
   const navItems = document.querySelectorAll('.nav-item');
   navItems.forEach(item => item.classList.remove('active'));
 
-  // Try to use event target first
   let clicked = null;
   if (ev && ev.target) {
     clicked = ev.target.closest('.nav-item');
   }
-  // Fallback: find by data-tab attribute
   if (!clicked) {
     clicked = document.querySelector(`.nav-item[data-tab="${tabName}"]`);
   }
@@ -415,7 +410,6 @@ function switchTab(tabName, ev) {
   }
 }
 
-// MODAL FUNCTIONS
 function openModal(modalType) {
   const modalId = modalType + 'Modal';
   document.getElementById(modalId).classList.add('active');
@@ -450,13 +444,10 @@ function updateDashboard() {
   document.getElementById('pendingTasks').textContent =
     appState.assignments.filter(a => a.status === 'pending').length;
 
-  // average attendance
   let totalAttendance = 0;
   let subjectsWithData = 0;
 
-  // use the active subjects for the current course
   const activeSubjects = loadSelectedSubjectsForCourse(getCurrentCourse());
-  // update Subjects count card on dashboard
   const subjectCountEl = document.getElementById('subjectCount');
   if (subjectCountEl) {
     subjectCountEl.textContent = activeSubjects.length;
@@ -481,11 +472,10 @@ function updateDashboard() {
     document.getElementById('avgAttendance').textContent = '--';
   }
 
-  // panels on the dashboard
   renderAttendanceAlerts();
   renderTaskAlerts();
   renderReminderAlerts();
-  showTodayFocus(); // optional auto-refresh
+  showTodayFocus(); 
 }
 
 function renderAttendanceAlerts() {
@@ -530,7 +520,6 @@ function renderAttendanceAlerts() {
     })
     .join('');
 }
-// TASK ALERTS – show which tasks are pending
 function renderTaskAlerts() {
     const container = document.getElementById('taskAlerts');
     if (!container) return; // in case HTML not updated
@@ -565,7 +554,6 @@ function renderTaskAlerts() {
         })
         .join('');
 }
-// ALERTS & REMINDERS – combines low attendance + near / overdue tasks
 function renderReminderAlerts() {
     const container = document.getElementById('reminderAlerts');
     if (!container) return;
@@ -587,13 +575,11 @@ function renderReminderAlerts() {
         }
     });
 
-    // 2) Assignment / quiz reminders
     const now = new Date();
     appState.assignments.forEach(a => {
         const days = getDaysFromToday(a.deadline);
         if (days === null) return;
 
-        // overdue or due soon
         if (days < 0 && a.status !== 'graded') {
             reminders.push({
                 type: 'task-overdue',
@@ -634,12 +620,10 @@ function renderReminderAlerts() {
         .join('');
 }
 
-// TODAY'S FOCUS – subjects that have work due today or in next 3 days
 function showTodayFocus() {
     const container = document.getElementById('todayFocus');
     if (!container) return;
 
-    // pick assignments/quiz that are still not graded
     const focusAssignments = appState.assignments.filter(a => {
         const days = getDaysFromToday(a.deadline);
         return typeof days === 'number' && days >= 0 && days <= 3 && a.status !== 'graded';
@@ -655,7 +639,6 @@ function showTodayFocus() {
         return;
     }
 
-    // group by subject
     const bySubject = {};
     focusAssignments.forEach(a => {
         const subj = a.subject || 'General';
@@ -688,7 +671,6 @@ function showTodayFocus() {
     container.innerHTML = blocks.join('');
 }
 
-// NOTES FUNCTIONS
 async function uploadNoteBackend() {
   const titleEl = document.getElementById('noteTitle');
   const subjectEl = document.getElementById('noteSubject');
@@ -746,7 +728,6 @@ async function uploadNoteBackend() {
     if (uploadBtn) { uploadBtn.disabled = false; uploadBtn.style.opacity = ''; uploadBtn.textContent = 'Upload'; }
   }
 
-  // refresh notes and keep user on notes tab
   try {
     await fetchAndRenderNotes();
     closeModal("uploadNote");
@@ -758,7 +739,6 @@ async function uploadNoteBackend() {
   }
 }
 
-// call this whenever you want to refresh notes from backend
 async function fetchAndRenderNotes(page = 1, limit = 50) {
   const subjectRaw = document.getElementById('notesFilter') ? document.getElementById('notesFilter').value : 'all';
   const subjectFilter = subjectRaw ? subjectRaw.trim() : 'all';
@@ -808,7 +788,6 @@ async function fetchAndRenderNotes(page = 1, limit = 50) {
   }
 }
 
-// helper: difference in whole days between today and a given date string (yyyy-mm-dd)
 function getDaysFromToday(dateStr) {
     if (!dateStr) return null;
     const d = new Date(dateStr);
@@ -822,7 +801,6 @@ function getDaysFromToday(dateStr) {
     return Math.round(diffMs / (1000 * 60 * 60 * 24));
 }
 
-// Renders notes from appState.notes into #notesGrid
 function renderNotesUI() {
   const notesGrid = document.getElementById('notesGrid');
   if (!appState.notes || appState.notes.length === 0) {
@@ -884,7 +862,6 @@ function renderNotesUI() {
   }).join('');
 }
 
-// small helper to avoid HTML injection
 function escapeHtml(str = '') {
   return String(str).replace(/[&<>"'`=\/]/g, function (s) {
     return ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;','/':'&#x2F;','`':'&#x60;','=':'&#x3D;' })[s];
@@ -904,7 +881,6 @@ async function deleteNoteBackend(noteId) {
 
   const backupNote = appState.notes[index];
 
-  // optimistic UI update
   appState.notes.splice(index, 1);
   renderNotesUI();
   updateDashboard();
@@ -926,7 +902,6 @@ async function deleteNoteBackend(noteId) {
       return;
     }
 
-    // success — keep removed
   } catch (err) {
     appState.notes.splice(index, 0, backupNote);
     renderNotesUI();
@@ -936,7 +911,6 @@ async function deleteNoteBackend(noteId) {
   }
 }
 
-// SYLLABUS FUNCTIONS
 function populateSyllabusSubjects() {
   const select = document.getElementById('syllabusSubjectSelect');
   if (!select) return;
@@ -1151,7 +1125,7 @@ function addCustomSubject() {
     }
   }
 
-  // add subject to selected list and attendance map
+  // add subject to selected list
   subjects.push(name);
   saveSelectedSubjectsForCourse(course, subjects);
 
@@ -1175,17 +1149,14 @@ function removeCustomSubject(name) {
   subjects = subjects.filter(s => s !== name);
   saveSelectedSubjectsForCourse(course, subjects);
 
-  // clean attendance data for this subject
   if (appState.attendance[name]) {
     delete appState.attendance[name];
   }
 
-  // clean syllabus data for this subject if it was created as custom
   if (syllabusData[name]) {
     delete syllabusData[name];
   }
 
-  // clear completed topics cache for this subject
   try {
     const key = getCompletedTopicsKey(name);
     localStorage.removeItem(key);
@@ -1197,11 +1168,9 @@ function removeCustomSubject(name) {
   renderAttendance();
   updateDashboard();
 
-  // re-open / refresh the manager to reflect changes
   openSubjectManager();
 }
 
-// ASSIGNMENTS FUNCTIONS
 function addAssignment() {
   const title = document.getElementById('assignmentTitle').value;
   const subject = document.getElementById('assignmentSubject').value;
