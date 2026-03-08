@@ -1,0 +1,291 @@
+# Hellfire Scholar — React Rebuild with Clerk + MongoDB
+
+Rebuild the app as a **React (Vite) frontend** with **Clerk for authentication** and a fresh **Express + MongoDB backend**. The new project lives in the same repo under a `frontend/` + [backend/](file:///Users/shreyanshsachan/Documents/hellfireScholar/backend) split.
+
+---
+
+## Architecture Overview
+
+```mermaid
+graph LR
+  subgraph Frontend - React + Vite
+    A[Landing Page /] --> B[Auth Pages /sign-in, /sign-up]
+    B --> C[App Shell /app/*]
+    C --> D[Dashboard]
+    C --> E[Notes]
+    C --> F[Syllabus]
+    C --> G[Assignments]
+    C --> H[Attendance]
+  end
+  subgraph Backend - Express
+    I[/api/notes]
+    J[/api/assignments]
+    K[/api/attendance]
+    L[/api/syllabus]
+    M[/api/user]
+  end
+  C -- "fetch + Clerk token" --> I & J & K & L & M
+  I & J & K & L & M --> N[(MongoDB)]
+```
+
+---
+
+## 1. How .env Files Work
+
+### Frontend (`frontend/.env`)
+Vite **only** exposes env vars prefixed with `VITE_`. Access them via `import.meta.env.VITE_*`.
+
+```env
+# Clerk publishable key (safe for frontend — it's a public key)
+VITE_CLERK_PUBLISHABLE_KEY=pk_test_XXXXXXXXXXXX
+
+# Backend API URL
+VITE_API_URL=http://localhost:4000
+```
+
+**Usage in code:**
+```jsx
+const API_URL = import.meta.env.VITE_API_URL;
+```
+
+### Backend (`backend/.env`)
+Use `dotenv` to load them. **Never commit this file** — add it to [.gitignore](file:///Users/shreyanshsachan/Documents/hellfireScholar/.gitignore).
+
+```env
+# MongoDB connection string (get from MongoDB Atlas)
+MONGO_URI=mongodb+srv://user:pass@cluster.mongodb.net/hellfireScholar
+
+# Clerk secret key (from Clerk Dashboard → API Keys)
+CLERK_SECRET_KEY=sk_test_XXXXXXXXXXXX
+
+# Server port
+PORT=4000
+```
+
+**Usage in code:**
+```js
+require('dotenv').config();
+const MONGO_URI = process.env.MONGO_URI;
+```
+
+> [!IMPORTANT]
+> **Create a Clerk Account first**: Go to [clerk.com](https://clerk.com), create an app, and grab your **Publishable Key** (for frontend) and **Secret Key** (for backend) from **Dashboard → API Keys**.
+
+> [!IMPORTANT]
+> **MongoDB Atlas**: Create a free cluster at [mongodb.com/atlas](https://mongodb.com/atlas), create a database user, whitelist your IP, and copy the connection string into `MONGO_URI`.
+
+---
+
+## 2. How Routing Works (React Router v6)
+
+The app has **3 layers** of pages:
+
+| Route | Page | Who can see it? |
+|---|---|---|
+| `/` | Landing page | Everyone |
+| `/sign-in` | Clerk Sign-In | Signed-out users |
+| `/sign-up` | Clerk Sign-Up | Signed-out users |
+| `/app` | Dashboard | Signed-in only |
+| `/app/notes` | Notes | Signed-in only |
+| `/app/syllabus` | Syllabus | Signed-in only |
+| `/app/assignments` | Assignments | Signed-in only |
+| `/app/attendance` | Attendance | Signed-in only |
+
+### How protection works:
+```jsx
+// App.jsx — simplified routing structure
+<ClerkProvider publishableKey={import.meta.env.VITE_CLERK_PUBLISHABLE_KEY}>
+  <BrowserRouter>
+    <Routes>
+      {/* Public routes */}
+      <Route path="/" element={<LandingPage />} />
+      <Route path="/sign-in" element={<SignInPage />} />
+      <Route path="/sign-up" element={<SignUpPage />} />
+
+      {/* Protected routes — wrapped in a layout with sidebar */}
+      <Route element={<ProtectedLayout />}>
+        <Route path="/app" element={<Dashboard />} />
+        <Route path="/app/notes" element={<Notes />} />
+        <Route path="/app/syllabus" element={<Syllabus />} />
+        <Route path="/app/assignments" element={<Assignments />} />
+        <Route path="/app/attendance" element={<Attendance />} />
+      </Route>
+    </Routes>
+  </BrowserRouter>
+</ClerkProvider>
+```
+
+### `ProtectedLayout` — redirects unauthenticated users:
+```jsx
+import { useAuth } from '@clerk/clerk-react';
+import { Navigate, Outlet } from 'react-router-dom';
+
+function ProtectedLayout() {
+  const { isSignedIn, isLoaded } = useAuth();
+  if (!isLoaded) return <LoadingSpinner />;
+  if (!isSignedIn) return <Navigate to="/sign-in" />;
+  return (
+    <div className="app-shell">
+      <Sidebar />
+      <main><Outlet /></main>
+    </div>
+  );
+}
+```
+
+---
+
+## 3. How Clerk Auth works
+
+### Frontend: `@clerk/clerk-react`
+- **`<ClerkProvider>`** wraps your entire app (in `main.jsx`)
+- **`<SignIn />`** and **`<SignUp />`** are prebuilt Clerk components — full auth UI out of the box
+- **`useUser()`** hook gives you the current user's name, email, avatar
+- **`useAuth()`** hook gives you `isSignedIn`, `getToken()` to attach JWT to API calls
+
+### Backend: `@clerk/express`
+- **`clerkMiddleware()`** — add as global middleware; it reads the Clerk session token from the request
+- **`getAuth(req)`** — extract `userId` from the authenticated request
+- **`requireAuth()`** — middleware that returns 401 if not signed in
+
+```js
+// backend/server.js
+const { clerkMiddleware } = require('@clerk/express');
+app.use(clerkMiddleware());
+
+// backend/routes/notes.js — protecting a route
+const { requireAuth, getAuth } = require('@clerk/express');
+
+router.get('/', requireAuth(), async (req, res) => {
+  const { userId } = getAuth(req);  // Clerk user ID
+  const notes = await Note.find({ userId });
+  res.json({ notes });
+});
+```
+
+### How the frontend sends tokens to the backend:
+```jsx
+import { useAuth } from '@clerk/clerk-react';
+
+function useApi() {
+  const { getToken } = useAuth();
+
+  async function apiFetch(path, options = {}) {
+    const token = await getToken();
+    const res = await fetch(`${import.meta.env.VITE_API_URL}${path}`, {
+      ...options,
+      headers: {
+        ...options.headers,
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+    return res.json();
+  }
+  return { apiFetch };
+}
+```
+
+---
+
+## 4. Project Structure
+
+```
+hellfireScholar/
+├── frontend/                    ← React + Vite
+│   ├── .env                     ← VITE_CLERK_PUBLISHABLE_KEY, VITE_API_URL
+│   ├── public/
+│   │   └── (icons, images)
+│   ├── src/
+│   │   ├── main.jsx             ← ClerkProvider + BrowserRouter
+│   │   ├── App.jsx              ← Routes
+│   │   ├── index.css            ← Global dark theme
+│   │   ├── hooks/
+│   │   │   └── useApi.js        ← Fetch wrapper with Clerk token
+│   │   ├── pages/
+│   │   │   ├── Landing.jsx      ← Public landing page
+│   │   │   ├── SignInPage.jsx   ← Clerk <SignIn />
+│   │   │   ├── SignUpPage.jsx   ← Clerk <SignUp />
+│   │   │   ├── Dashboard.jsx
+│   │   │   ├── Notes.jsx
+│   │   │   ├── Syllabus.jsx
+│   │   │   ├── Assignments.jsx
+│   │   │   └── Attendance.jsx
+│   │   ├── components/
+│   │   │   ├── ProtectedLayout.jsx
+│   │   │   ├── Sidebar.jsx
+│   │   │   ├── Header.jsx
+│   │   │   ├── StatCard.jsx
+│   │   │   ├── NoteCard.jsx
+│   │   │   ├── Modal.jsx
+│   │   │   └── ProgressBar.jsx
+│   │   └── data/
+│   │       ├── courseSubjects.js
+│   │       └── syllabusData.js
+│   └── package.json
+│
+├── backend/                     ← Express + MongoDB
+│   ├── .env                     ← MONGO_URI, CLERK_SECRET_KEY
+│   ├── server.js
+│   ├── models/
+│   │   ├── user.js              ← course, selectedSubjects
+│   │   ├── note.js
+│   │   ├── assignment.js
+│   │   ├── attendance.js
+│   │   └── syllabusProgress.js
+│   ├── routes/
+│   │   ├── notes.js
+│   │   ├── assignments.js
+│   │   ├── attendance.js
+│   │   ├── syllabus.js
+│   │   └── user.js              ← course/subject preferences
+│   └── package.json
+│
+└── .gitignore                   ← includes .env, node_modules
+```
+
+---
+
+## 5. Backend API Endpoints
+
+| Method | Endpoint | Purpose |
+|---|---|---|
+| **User** | | |
+| GET | `/api/user/profile` | Get/create user profile (course, subjects) |
+| PATCH | `/api/user/profile` | Update course & selected subjects |
+| **Notes** | | |
+| GET | `/api/notes` | List user's notes (filterable) |
+| POST | `/api/notes/upload` | Upload a note file |
+| DELETE | `/api/notes/:id` | Delete a note |
+| **Assignments** | | |
+| GET | `/api/assignments` | List assignments |
+| POST | `/api/assignments` | Create assignment |
+| PATCH | `/api/assignments/:id` | Update status/marks |
+| DELETE | `/api/assignments/:id` | Delete assignment |
+| **Attendance** | | |
+| GET | `/api/attendance` | List all subject attendance |
+| POST | `/api/attendance/mark` | Mark present/absent |
+| **Syllabus** | | |
+| GET | `/api/syllabus/:subject` | Get completed topics |
+| PATCH | `/api/syllabus/:subject/toggle` | Toggle topic completion |
+
+All routes are protected with Clerk's `requireAuth()` middleware.
+
+---
+
+## 6. Phased Build Order
+
+1. **Phase 1** — Scaffold frontend (Vite + React Router + Clerk) + landing page + auth pages
+2. **Phase 2** — Build backend (Express + MongoDB + Clerk middleware + all models + routes)
+3. **Phase 3** — Build app pages: Dashboard, Notes, Syllabus, Assignments, Attendance
+4. **Phase 4** — Polish: dark theme, animations, responsive design
+
+---
+
+## 7. Verification
+
+- **Auth flow**: Landing → Sign Up → redirected to `/app` → Sign Out → back to landing
+- **CRUD flows**: Notes, Assignments work end-to-end through the browser
+- **Attendance**: Mark present/absent, see dashboard stats update
+- **Syllabus**: Toggle topics, see progress bar update
+- **Build**: `npm run build` succeeds with zero errors
